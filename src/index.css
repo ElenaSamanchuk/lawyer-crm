@@ -1,26 +1,65 @@
-:root {
-  color-scheme: light;
-  font-family: 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
-  line-height: 1.5;
-  color: #1c2434;
-  background: #eef2f8;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply min-h-screen bg-canvas font-sans text-ink antialiased;
+  }
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer components {
+  .field-label {
+    @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-}
+  .field-input {
+    @apply w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink shadow-sm outline-none transition
+      placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20;
+  }
 
-button,
-input,
-select {
-  font: inherit;
-}
+  .field-input--error {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-200;
+  }
 
-button {
-  cursor: pointer;
+  .field-error {
+    @apply mt-1 text-xs font-medium text-red-600;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-brand text-white hover:bg-accent;
+  }
+
+  .btn-secondary {
+    @apply border border-line bg-white text-ink hover:border-accent/40 hover:bg-canvas;
+  }
+
+  .btn-ghost {
+    @apply text-muted hover:bg-canvas hover:text-ink;
+  }
+
+  .btn-danger {
+    @apply border border-red-200 bg-red-50 text-red-700 hover:bg-red-100;
+  }
+
+  .status-pill {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .status-pill--new {
+    @apply bg-sky-100 text-sky-800;
+  }
+
+  .status-pill--active {
+    @apply bg-amber-100 text-amber-900;
+  }
+
+  .status-pill--closed {
+    @apply bg-emerald-100 text-emerald-800;
+  }
 }
