@@ -9,12 +9,15 @@ import { daysSince, daysUntil, isOverdue, isStaleContact } from '../lib/dates';
 import { formatPhone, formatShortDate } from '../lib/format';
 import { ClientActions } from './ClientActions';
 import { ClientCard } from './ClientCard';
+import { ClientAvatar } from './ui/ClientAvatar';
+import { PriorityBadge } from './ui/PriorityBadge';
 import { StatusSelect } from './ui/StatusSelect';
 
-type SortKey = 'name' | 'followUpDate' | 'status';
+type SortKey = 'name' | 'followUpDate' | 'status' | 'priority';
 
 type ClientTableProps = {
   clients: Client[];
+  onSelect: (client: Client) => void;
   onStatusChange: (id: string, status: CaseStatus) => void;
   onDelete: (id: string) => void;
   onMarkContact: (id: string) => void;
@@ -29,6 +32,7 @@ const FILTER_OPTIONS: { key: FilterKey; label: string }[] = [
 
 export function ClientTable({
   clients,
+  onSelect,
   onStatusChange,
   onDelete,
   onMarkContact,
@@ -45,9 +49,7 @@ export function ClientTable({
       active: 0,
       closed: 0,
     };
-    for (const client of clients) {
-      base[client.status] += 1;
-    }
+    for (const client of clients) base[client.status] += 1;
     return base;
   }, [clients]);
 
@@ -58,15 +60,22 @@ export function ClientTable({
         !q ||
         client.name.toLowerCase().includes(q) ||
         client.phone.includes(q) ||
-        client.caseType.toLowerCase().includes(q);
+        client.email.toLowerCase().includes(q) ||
+        client.caseType.toLowerCase().includes(q) ||
+        client.notes.toLowerCase().includes(q);
       const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
       return matchesQuery && matchesStatus;
     });
+
+    const priorityWeight = { high: 0, normal: 1, low: 2 };
 
     list = [...list].sort((a, b) => {
       if (sortKey === 'name') return a.name.localeCompare(b.name, 'ru');
       if (sortKey === 'status') {
         return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+      }
+      if (sortKey === 'priority') {
+        return priorityWeight[a.priority] - priorityWeight[b.priority];
       }
       return a.followUpDate.localeCompare(b.followUpDate);
     });
@@ -79,18 +88,16 @@ export function ClientTable({
       <div className="panel-head">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="font-serif text-xl font-bold text-brand sm:text-2xl">Клиенты</h2>
-            <p className="mt-1 text-sm text-muted">
-              {filtered.length} из {clients.length} в списке
-            </p>
+            <h2 className="section-title text-xl">Клиенты</h2>
+            <p className="section-hint">{filtered.length} из {clients.length} в списке</p>
           </div>
 
-          <div className="toolbar w-full lg:max-w-xl">
+          <div className="toolbar w-full lg:max-w-2xl">
             <label className="relative block min-w-0">
               <span className="sr-only">Поиск клиентов</span>
               <input
                 className="field-input pl-10"
-                placeholder="Поиск по имени, телефону, делу…"
+                placeholder="Поиск по имени, телефону, email, заметке…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -110,12 +117,13 @@ export function ClientTable({
             </label>
 
             <select
-              className="field-select w-full sm:w-[11.5rem]"
+              className="field-select w-full sm:w-[12rem]"
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
               aria-label="Сортировка"
             >
               <option value="followUpDate">По дате контакта</option>
+              <option value="priority">По приоритету</option>
               <option value="name">По имени</option>
               <option value="status">По статусу</option>
             </select>
@@ -151,52 +159,48 @@ export function ClientTable({
       {filtered.length === 0 ? (
         <div className="panel-body py-16 text-center">
           <p className="font-serif text-lg text-brand">Нет клиентов по фильтру</p>
-          <p className="mt-2 text-sm text-muted">
-            Измените поиск или добавьте нового клиента в форме выше.
-          </p>
+          <p className="mt-2 text-sm text-muted">Измените поиск или добавьте нового клиента.</p>
         </div>
       ) : (
         <>
           <div className="mobile-list">
-            {filtered.map((client) => {
-              const overdue = isOverdue(client);
-              const stale = isStaleContact(client);
-
-              return (
-                <ClientCard
-                  key={client.id}
-                  client={client}
-                  overdue={overdue}
-                  stale={stale}
-                  pendingDelete={pendingDeleteId === client.id}
-                  onStatusChange={(status) => onStatusChange(client.id, status)}
-                  onMarkContact={() => onMarkContact(client.id)}
-                  onDeleteRequest={() => setPendingDeleteId(client.id)}
-                  onDeleteConfirm={() => {
-                    onDelete(client.id);
-                    setPendingDeleteId(null);
-                  }}
-                  onDeleteCancel={() => setPendingDeleteId(null)}
-                />
-              );
-            })}
+            {filtered.map((client) => (
+              <ClientCard
+                key={client.id}
+                client={client}
+                overdue={isOverdue(client)}
+                stale={isStaleContact(client)}
+                pendingDelete={pendingDeleteId === client.id}
+                onOpen={() => onSelect(client)}
+                onStatusChange={(status) => onStatusChange(client.id, status)}
+                onMarkContact={() => onMarkContact(client.id)}
+                onDeleteRequest={() => setPendingDeleteId(client.id)}
+                onDeleteConfirm={() => {
+                  onDelete(client.id);
+                  setPendingDeleteId(null);
+                }}
+                onDeleteCancel={() => setPendingDeleteId(null)}
+              />
+            ))}
           </div>
 
           <div className="hidden overflow-x-auto lg:block">
             <table className="data-table">
               <colgroup>
-                <col className="w-[24%]" />
-                <col className="w-[16%]" />
+                <col className="w-[26%]" />
+                <col className="w-[14%]" />
+                <col className="w-[10%]" />
                 <col className="w-[12%]" />
                 <col className="w-[14%]" />
-                <col className="w-[16%]" />
-                <col className="w-[18%]" />
+                <col className="w-[14%]" />
+                <col className="w-[10%]" />
               </colgroup>
               <thead>
                 <tr>
                   <th>Клиент</th>
                   <th>Контакт</th>
                   <th>Дело</th>
+                  <th>Приоритет</th>
                   <th>Статус</th>
                   <th>Следующий шаг</th>
                   <th>Действия</th>
@@ -216,27 +220,37 @@ export function ClientTable({
                   return (
                     <tr key={client.id} className={rowClass}>
                       <td>
-                        <p className="break-anywhere font-semibold text-ink">{client.name}</p>
-                        <p className="mt-1 text-xs text-muted">
-                          В базе с {formatShortDate(client.createdAt)}
-                        </p>
+                        <button
+                          type="button"
+                          className="client-link"
+                          onClick={() => onSelect(client)}
+                        >
+                          <ClientAvatar name={client.name} size="sm" />
+                          <span>
+                            <span className="block break-anywhere font-semibold text-ink">{client.name}</span>
+                            <span className="mt-0.5 block text-xs text-muted">
+                              В базе с {formatShortDate(client.createdAt)}
+                            </span>
+                          </span>
+                        </button>
                       </td>
                       <td>
-                        <a
-                          className="font-medium text-accent hover:underline"
-                          href={`tel:${client.phone}`}
-                        >
+                        <a className="drawer-link" href={`tel:${client.phone}`}>
                           {formatPhone(client.phone)}
                         </a>
+                        {client.email ? (
+                          <a className="mt-1 block text-xs text-muted hover:text-accent" href={`mailto:${client.email}`}>
+                            {client.email}
+                          </a>
+                        ) : null}
                         <p className="mt-1 text-xs text-muted">
                           {daysSince(client.lastContactAt) === 0
                             ? 'Контакт сегодня'
                             : `Без контакта ${daysSince(client.lastContactAt)} дн.`}
                         </p>
                       </td>
-                      <td>
-                        <span className="case-tag">{client.caseType}</span>
-                      </td>
+                      <td><span className="case-tag">{client.caseType}</span></td>
+                      <td><PriorityBadge priority={client.priority} /></td>
                       <td>
                         <StatusSelect
                           value={client.status}

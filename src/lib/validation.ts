@@ -2,6 +2,7 @@ import type { ClientDraft, FormErrors } from '../types';
 
 const NAME_RE = /^[\p{L}\p{N}\s«»"'.,()\-–—&]+$/u;
 const PHONE_RE = /^\+[\d\s()-]{10,18}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function normalizePhone(value: string): string {
   const trimmed = value.trim();
@@ -13,7 +14,7 @@ export function normalizePhone(value: string): string {
   return trimmed.startsWith('+') ? trimmed : `+${digits}`;
 }
 
-export function validateClientDraft(draft: ClientDraft): FormErrors {
+export function validateClientDraft(draft: ClientDraft, editing = false): FormErrors {
   const errors: FormErrors = {};
   const name = draft.name.trim();
 
@@ -34,19 +35,28 @@ export function validateClientDraft(draft: ClientDraft): FormErrors {
     errors.phone = 'Формат: +375 29 123-45-67 или +7 999 000-00-00';
   }
 
+  const email = draft.email.trim();
+  if (email && !EMAIL_RE.test(email)) {
+    errors.email = 'Некорректный email';
+  }
+
   if (!draft.caseType.trim()) {
     errors.caseType = 'Выберите тип дела';
   }
 
   if (!draft.followUpDate) {
     errors.followUpDate = 'Укажите дату следующего контакта';
-  } else {
+  } else if (!editing) {
     const selected = new Date(`${draft.followUpDate}T12:00:00`);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (selected < today) {
       errors.followUpDate = 'Дата не может быть в прошлом';
     }
+  }
+
+  if (draft.notes.length > 2000) {
+    errors.notes = 'Заметка слишком длинная (макс. 2000 символов)';
   }
 
   return errors;

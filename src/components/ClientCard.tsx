@@ -2,6 +2,8 @@ import type { Client } from '../types';
 import { daysSince, daysUntil } from '../lib/dates';
 import { formatPhone, formatShortDate } from '../lib/format';
 import { ClientActions } from './ClientActions';
+import { ClientAvatar } from './ui/ClientAvatar';
+import { PriorityBadge } from './ui/PriorityBadge';
 import { StatusSelect } from './ui/StatusSelect';
 import type { CaseStatus } from '../types';
 
@@ -10,6 +12,7 @@ type ClientCardProps = {
   overdue: boolean;
   stale: boolean;
   pendingDelete: boolean;
+  onOpen: () => void;
   onStatusChange: (status: CaseStatus) => void;
   onMarkContact: () => void;
   onDeleteRequest: () => void;
@@ -22,6 +25,7 @@ export function ClientCard({
   overdue,
   stale,
   pendingDelete,
+  onOpen,
   onStatusChange,
   onMarkContact,
   onDeleteRequest,
@@ -34,17 +38,20 @@ export function ClientCard({
     <article
       className={`client-card ${overdue ? 'client-card--overdue' : stale ? 'client-card--stale' : ''}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <button type="button" className="client-card__open" onClick={onOpen}>
+        <ClientAvatar name={client.name} />
+        <div className="min-w-0 text-left">
           <h3 className="break-anywhere font-semibold text-ink">{client.name}</h3>
-          <a className="mt-1 inline-block text-sm font-medium text-accent" href={`tel:${client.phone}`}>
-            {formatPhone(client.phone)}
-          </a>
+          <p className="mt-1 text-sm text-accent">{formatPhone(client.phone)}</p>
         </div>
         <span className="case-tag shrink-0">{client.caseType}</span>
-      </div>
+      </button>
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Приоритет</dt>
+          <dd className="mt-1.5"><PriorityBadge priority={client.priority} /></dd>
+        </div>
         <div>
           <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Статус</dt>
           <dd className="mt-1.5">
@@ -56,7 +63,7 @@ export function ClientCard({
             />
           </dd>
         </div>
-        <div>
+        <div className="col-span-2">
           <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Следующий шаг</dt>
           <dd className="mt-1.5">
             <p className="font-semibold text-ink">{formatShortDate(client.followUpDate)}</p>
@@ -77,8 +84,6 @@ export function ClientCard({
             {daysSince(client.lastContactAt) === 0
               ? 'Сегодня'
               : `${daysSince(client.lastContactAt)} дн. назад`}
-            <span className="text-line"> · </span>
-            в базе с {formatShortDate(client.createdAt)}
           </dd>
         </div>
       </dl>

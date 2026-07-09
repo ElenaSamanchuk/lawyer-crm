@@ -1,181 +1,178 @@
 import { useMemo, useState } from 'react';
-import { ClientForm } from './components/ClientForm';
+import { ActivityTimeline } from './components/ActivityTimeline';
+import { ClientDrawer } from './components/ClientDrawer';
+import { ClientModal } from './components/ClientModal';
 import { ClientTable } from './components/ClientTable';
+import { DashboardView } from './components/DashboardView';
+import { PipelineView } from './components/PipelineView';
+import { Sidebar } from './components/layout/Sidebar';
 import { StatsBar } from './components/StatsBar';
 import { Toast } from './components/Toast';
+import { useClientsApp } from './hooks/useClientsApp';
+import { allActivity } from './lib/activity';
 import { isOverdue } from './lib/dates';
-import { buildReminderMessage, whatsAppLink } from './lib/messages';
-import { notifyLawyer } from './lib/notifications';
-import { loadClients, saveClients } from './storage';
-import {
-  STATUS_LABELS,
-  type CaseStatus,
-  type Client,
-  type ClientDraft,
-} from './types';
-
-type ToastState = {
-  message: string;
-  action?: { label: string; href: string };
-};
-
-function countByStatus(clients: Client[], status: CaseStatus): number {
-  return clients.filter((c) => c.status === status).length;
-}
+import { downloadCsv } from './lib/export';
+import type { AppView, Client } from './types';
+import { VIEW_LABELS } from './types';
 
 export default function App() {
-  const [clients, setClients] = useState<Client[]>(() => loadClients());
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const {
+    clients,
+    toast,
+    stats,
+    addClient,
+    editClient,
+    changeStatus,
+    deleteClient,
+    markContact,
+    saveNotes,
+    toggleChecklistItem,
+    setFollowUpDate,
+    clearToast,
+  } = useClientsApp();
 
-  const totals = useMemo(
-    () => ({
-      all: clients.length,
-      new: countByStatus(clients, 'new'),
-      active: countByStatus(clients, 'active'),
-      closed: countByStatus(clients, 'closed'),
-    }),
-    [clients],
-  );
+  const [view, setView] = useState<AppView>('dashboard');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [drawerClientId, setDrawerClientId] = useState<string | null>(null);
+  const [pendingDeleteInDrawer, setPendingDeleteInDrawer] = useState(false);
 
   const overdueCount = useMemo(
     () => clients.filter((client) => isOverdue(client)).length,
     [clients],
   );
 
-  const persist = (next: Client[]) => {
-    setClients(next);
-    saveClients(next);
+  const drawerClient = clients.find((client) => client.id === drawerClientId) ?? null;
+  const recentActivity = useMemo(() => allActivity(clients), [clients]);
+
+  const openCreate = () => {
+    setModalMode('create');
+    setEditingClient(null);
+    setModalOpen(true);
   };
 
-  const showToast = (state: ToastState) => {
-    setToast(state);
-    window.setTimeout(() => setToast(null), 4500);
+  const openEdit = (client: Client) => {
+    setModalMode('edit');
+    setEditingClient(client);
+    setModalOpen(true);
   };
 
-  const handleAdd = async (draft: ClientDraft) => {
-    const now = new Date().toISOString();
-    const client: Client = {
-      id: crypto.randomUUID(),
-      name: draft.name,
-      phone: draft.phone,
-      status: draft.status,
-      caseType: draft.caseType,
-      followUpDate: draft.followUpDate,
-      createdAt: now,
-      updatedAt: now,
-      lastContactAt: now,
-    };
-
-    persist([client, ...clients]);
-
-    const notified = await notifyLawyer(
-      'Новый клиент в LexDesk',
-      `${client.name} · ${client.caseType} · ${STATUS_LABELS[client.status]}`,
-    );
-
-    const message = buildReminderMessage(client);
-    showToast({
-      message: notified
-        ? `«${client.name}» добавлен · браузерное уведомление отправлено`
-        : `«${client.name}» добавлен · можно сразу написать клиенту`,
-      action: {
-        label: 'Открыть WhatsApp с шаблоном',
-        href: whatsAppLink(client.phone, message),
-      },
-    });
+  const openDrawer = (client: Client) => {
+    setDrawerClientId(client.id);
+    setPendingDeleteInDrawer(false);
   };
 
-  const handleStatusChange = (id: string, status: CaseStatus) => {
-    const prev = clients.find((c) => c.id === id);
-    if (!prev || prev.status === status) return;
-
-    const now = new Date().toISOString();
-    persist(
-      clients.map((c) =>
-        c.id === id ? { ...c, status, updatedAt: now } : c,
-      ),
-    );
-
-    void notifyLawyer(
-      'Статус дела изменён',
-      `${prev.name}: ${STATUS_LABELS[prev.status]} → ${STATUS_LABELS[status]}`,
-    );
-
-    showToast({
-      message: `${prev.name}: ${STATUS_LABELS[prev.status]} → ${STATUS_LABELS[status]}`,
-    });
-  };
-
-  const handleDelete = (id: string) => {
-    const removed = clients.find((c) => c.id === id);
-    persist(clients.filter((c) => c.id !== id));
-    if (removed) {
-      showToast({ message: `Клиент «${removed.name}» удалён` });
-    }
-  };
-
-  const handleMarkContact = (id: string) => {
-    const now = new Date().toISOString();
-    persist(
-      clients.map((c) =>
-        c.id === id ? { ...c, lastContactAt: now, updatedAt: now } : c,
-      ),
-    );
-    const client = clients.find((c) => c.id === id);
-    if (client) {
-      showToast({ message: `Контакт с «${client.name}» отмечен сегодня` });
-    }
+  const closeDrawer = () => {
+    setDrawerClientId(null);
+    setPendingDeleteInDrawer(false);
   };
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-brand/20 bg-brand text-white">
-        <div className="app-shell py-6 sm:py-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.24em] text-white/65">
-                Прототип · CRM для юриста
-              </p>
-              <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-4xl">
-                LexDesk
-              </h1>
-              <p className="mt-3 text-sm leading-relaxed text-white/85 sm:text-base text-balance">
-                Клиенты, статусы дел, контроль сроков и быстрые напоминания. Данные сохраняются
-                локально в браузере.
-              </p>
-            </div>
+    <div className="app-layout">
+      <Sidebar
+        view={view}
+        onViewChange={setView}
+        onCreateClient={openCreate}
+        onExport={() => downloadCsv(clients)}
+        clientCount={clients.length}
+        overdueCount={overdueCount}
+      />
 
-            <aside className="w-full max-w-sm rounded-2xl border border-white/15 bg-white/10 px-4 py-4 backdrop-blur-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">
-                Сегодня в фокусе
-              </p>
-              <p className="mt-2 text-sm font-medium text-white">
-                {overdueCount > 0
-                  ? `${overdueCount} ${overdueCount === 1 ? 'дело' : 'дела'} с просроченным контактом`
-                  : 'Просроченных контактов нет'}
-              </p>
-            </aside>
+      <div className="app-main">
+        <header className="topbar">
+          <div>
+            <p className="topbar__eyebrow">LexDesk · прототип legal CRM</p>
+            <h2 className="topbar__title">{VIEW_LABELS[view]}</h2>
           </div>
-        </div>
-      </header>
+          <div className="topbar__actions">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => downloadCsv(clients)}>
+              Экспорт
+            </button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={openCreate}>
+              + Клиент
+            </button>
+          </div>
+        </header>
 
-      <main className="app-shell space-y-5 py-6 sm:space-y-6 sm:py-8">
-        <StatsBar totals={totals} overdueCount={overdueCount} />
-        <ClientForm onSubmit={handleAdd} />
-        <ClientTable
-          clients={clients}
-          onStatusChange={handleStatusChange}
-          onDelete={handleDelete}
-          onMarkContact={handleMarkContact}
-        />
-      </main>
+        <main className="app-content space-y-6">
+          <StatsBar totals={stats} overdueCount={overdueCount} />
+
+          {view === 'dashboard' ? (
+            <>
+              <DashboardView clients={clients} onSelectClient={openDrawer} />
+              <section className="panel">
+                <div className="panel-head">
+                  <h3 className="section-title">Последняя активность</h3>
+                  <p className="section-hint">История действий по всем клиентам</p>
+                </div>
+                <div className="panel-body">
+                  <ActivityTimeline items={recentActivity} />
+                </div>
+              </section>
+            </>
+          ) : null}
+
+          {view === 'clients' ? (
+            <ClientTable
+              clients={clients}
+              onSelect={openDrawer}
+              onStatusChange={changeStatus}
+              onDelete={(id) => {
+                deleteClient(id);
+                if (drawerClientId === id) closeDrawer();
+              }}
+              onMarkContact={markContact}
+            />
+          ) : null}
+
+          {view === 'pipeline' ? (
+            <PipelineView
+              clients={clients}
+              onSelect={openDrawer}
+              onStatusChange={changeStatus}
+            />
+          ) : null}
+        </main>
+      </div>
+
+      <ClientModal
+        open={modalOpen}
+        mode={modalMode}
+        initial={editingClient ?? undefined}
+        onClose={() => setModalOpen(false)}
+        onSubmit={(draft) => {
+          if (modalMode === 'create') {
+            void addClient(draft).then((id) => setDrawerClientId(id));
+          } else if (editingClient) {
+            editClient(editingClient.id, draft);
+          }
+        }}
+      />
+
+      <ClientDrawer
+        client={drawerClient}
+        open={Boolean(drawerClient)}
+        onClose={closeDrawer}
+        onEdit={openEdit}
+        onStatusChange={(status) => drawerClient && changeStatus(drawerClient.id, status)}
+        onMarkContact={() => drawerClient && markContact(drawerClient.id)}
+        onDeleteRequest={() => setPendingDeleteInDrawer(true)}
+        onDeleteConfirm={() => {
+          if (drawerClient) {
+            deleteClient(drawerClient.id);
+            closeDrawer();
+          }
+        }}
+        onDeleteCancel={() => setPendingDeleteInDrawer(false)}
+        pendingDelete={pendingDeleteInDrawer}
+        onSaveNotes={(notes) => drawerClient && saveNotes(drawerClient.id, notes)}
+        onToggleChecklist={(itemId) => drawerClient && toggleChecklistItem(drawerClient.id, itemId)}
+        onFollowUpChange={(date) => drawerClient && setFollowUpDate(drawerClient.id, date)}
+      />
 
       {toast ? (
-        <Toast
-          message={toast.message}
-          action={toast.action}
-          onClose={() => setToast(null)}
-        />
+        <Toast message={toast.message} action={toast.action} onClose={clearToast} />
       ) : null}
     </div>
   );
