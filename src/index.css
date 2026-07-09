@@ -426,19 +426,20 @@
   }
 
   .client-avatar {
-    @apply inline-flex shrink-0 items-center justify-center rounded-full bg-brand/10 font-bold text-brand ring-1 ring-brand/10;
+    @apply box-border flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand/10 font-bold leading-none text-brand ring-1 ring-brand/10;
+    aspect-ratio: 1 / 1;
   }
 
   .client-avatar--sm {
-    @apply h-9 w-9 text-xs;
+    @apply h-9 w-9 min-h-9 min-w-9 max-h-9 max-w-9 text-[0.625rem];
   }
 
   .client-avatar--md {
-    @apply h-10 w-10 text-sm;
+    @apply h-10 w-10 min-h-10 min-w-10 max-h-10 max-w-10 text-xs;
   }
 
   .client-avatar--lg {
-    @apply h-12 w-12 text-base;
+    @apply h-12 w-12 min-h-12 min-w-12 max-h-12 max-w-12 text-sm;
   }
 
   .priority-badge {
