@@ -129,30 +129,37 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-line bg-brand text-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
-              Прототип · тестовое задание
-            </p>
-            <h1 className="mt-2 font-serif text-3xl font-bold sm:text-4xl">LexDesk</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/85 sm:text-base">
-              Рабочий стол юриста: клиенты, статусы дел, контроль сроков и быстрые напоминания в
-              WhatsApp / Telegram. Данные хранятся локально в браузере.
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm">
-            <p className="font-semibold">Сегодня в фокусе</p>
-            <p className="mt-1 text-white/85">
-              {overdueCount > 0
-                ? `${overdueCount} дел с просроченным контактом`
-                : 'Просроченных контактов нет'}
-            </p>
+      <header className="border-b border-brand/20 bg-brand text-white">
+        <div className="app-shell py-6 sm:py-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.24em] text-white/65">
+                Прототип · CRM для юриста
+              </p>
+              <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-4xl">
+                LexDesk
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-white/85 sm:text-base text-balance">
+                Клиенты, статусы дел, контроль сроков и быстрые напоминания. Данные сохраняются
+                локально в браузере.
+              </p>
+            </div>
+
+            <aside className="w-full max-w-sm rounded-2xl border border-white/15 bg-white/10 px-4 py-4 backdrop-blur-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                Сегодня в фокусе
+              </p>
+              <p className="mt-2 text-sm font-medium text-white">
+                {overdueCount > 0
+                  ? `${overdueCount} ${overdueCount === 1 ? 'дело' : 'дела'} с просроченным контактом`
+                  : 'Просроченных контактов нет'}
+              </p>
+            </aside>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+      <main className="app-shell space-y-5 py-6 sm:space-y-6 sm:py-8">
         <StatsBar totals={totals} overdueCount={overdueCount} />
         <ClientForm onSubmit={handleAdd} />
         <ClientTable
@@ -161,15 +168,6 @@ export default function App() {
           onDelete={handleDelete}
           onMarkContact={handleMarkContact}
         />
-
-        <section className="rounded-2xl border border-dashed border-line bg-white/70 p-5 text-sm text-muted">
-          <h3 className="font-semibold text-ink">Бонус: автоматизация</h3>
-          <p className="mt-2 leading-relaxed">
-            При добавлении клиента и смене статуса отправляется браузерное уведомление (если
-            разрешено). Кнопки WhatsApp и Telegram открывают готовый текст с подстановкой имени,
-            типа дела и даты следующего шага — без ручного копирования.
-          </p>
-        </section>
       </main>
 
       {toast ? (

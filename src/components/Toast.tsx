@@ -7,23 +7,24 @@ type ToastProps = {
 export function Toast({ message, action, onClose }: ToastProps) {
   return (
     <div
-      className="fixed bottom-5 left-1/2 z-50 w-[min(92vw,520px)] -translate-x-1/2 rounded-xl border border-line bg-white p-4 shadow-panel"
+      className="safe-bottom fixed inset-x-4 bottom-4 z-50 mx-auto max-w-lg rounded-2xl border border-line bg-surface p-4 shadow-float sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
       role="status"
+      aria-live="polite"
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm text-ink">{message}</p>
+        <p className="text-sm leading-relaxed text-ink">{message}</p>
         <button
           type="button"
-          className="btn btn-ghost px-2 py-1 text-xs"
+          className="btn btn-ghost btn-sm shrink-0 px-2"
           onClick={onClose}
-          aria-label="Закрыть"
+          aria-label="Закрыть уведомление"
         >
           ✕
         </button>
       </div>
       {action ? (
         <a
-          className="btn btn-secondary mt-3 w-full text-xs sm:w-auto"
+          className="btn btn-secondary btn-sm mt-3 w-full sm:w-auto"
           href={action.href}
           target="_blank"
           rel="noreferrer"

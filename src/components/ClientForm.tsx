@@ -75,19 +75,19 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
     touched[field] && errors[field] ? errors[field] : undefined;
 
   return (
-    <section className="rounded-2xl border border-line bg-white p-5 shadow-panel sm:p-6">
-      <div className="mb-5">
-        <h2 className="font-serif text-xl font-bold text-brand">Новый клиент</h2>
-        <p className="mt-1 text-sm text-muted">
-          Поля проверяются до сохранения — телефон в международном формате, дата контакта не в
-          прошлом.
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="font-serif text-xl font-bold text-brand sm:text-2xl">Новый клиент</h2>
+        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">
+          Обязательные поля проверяются до сохранения. Телефон — в международном формате, дата
+          контакта — не в прошлом.
         </p>
       </div>
 
-      <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit} noValidate>
+      <form className="panel-body grid gap-5 md:grid-cols-2" onSubmit={handleSubmit} noValidate>
         <div>
           <label className="field-label" htmlFor="client-name">
-            Имя / компания <span className="text-red-500">*</span>
+            Имя / компания <span className="text-danger">*</span>
           </label>
           <input
             id="client-name"
@@ -103,7 +103,7 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
 
         <div>
           <label className="field-label" htmlFor="client-phone">
-            Телефон <span className="text-red-500">*</span>
+            Телефон <span className="text-danger">*</span>
           </label>
           <input
             id="client-phone"
@@ -123,11 +123,11 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
 
         <div>
           <label className="field-label" htmlFor="client-case-type">
-            Тип дела <span className="text-red-500">*</span>
+            Тип дела <span className="text-danger">*</span>
           </label>
           <select
             id="client-case-type"
-            className={`field-input ${showError('caseType') ? 'field-input--error' : ''}`}
+            className={`field-select ${showError('caseType') ? 'field-input--error' : ''}`}
             value={draft.caseType}
             onChange={(e) => update('caseType', e.target.value)}
             onBlur={() => touch('caseType')}
@@ -147,7 +147,7 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
           </label>
           <select
             id="client-status"
-            className="field-input"
+            className="field-select"
             value={draft.status}
             onChange={(e) => update('status', e.target.value as CaseStatus)}
           >
@@ -161,12 +161,12 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
 
         <div className="md:col-span-2">
           <label className="field-label" htmlFor="client-follow-up">
-            Следующий контакт <span className="text-red-500">*</span>
+            Следующий контакт <span className="text-danger">*</span>
           </label>
           <input
             id="client-follow-up"
             type="date"
-            className={`field-input max-w-xs ${showError('followUpDate') ? 'field-input--error' : ''}`}
+            className={`field-date max-w-xs ${showError('followUpDate') ? 'field-input--error' : ''}`}
             value={draft.followUpDate}
             onChange={(e) => update('followUpDate', e.target.value)}
             onBlur={() => touch('followUpDate')}
@@ -174,7 +174,7 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
           {showError('followUpDate') ? (
             <p className="field-error">{errors.followUpDate}</p>
           ) : (
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1.5 text-xs text-muted">
               Напоминание и просрочка считаются от этой даты.
             </p>
           )}

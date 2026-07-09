@@ -7,32 +7,42 @@ type StatsBarProps = {
 };
 
 export function StatsBar({ totals, overdueCount }: StatsBarProps) {
+  const metrics = [
+    { key: 'all', label: 'Всего', value: totals.all, tone: 'default' as const },
+    ...STATUS_ORDER.map((status) => ({
+      key: status,
+      label: STATUS_LABELS[status],
+      value: totals[status],
+      tone: 'default' as const,
+    })),
+    ...(overdueCount > 0
+      ? [{ key: 'overdue', label: 'Просрочено', value: overdueCount, tone: 'danger' as const }]
+      : []),
+  ];
+
   return (
-    <section
-      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
-      aria-label="Счётчики по статусам"
-    >
-      <article className="rounded-xl border border-line bg-white p-4 shadow-panel">
-        <p className="text-3xl font-bold text-brand">{totals.all}</p>
-        <p className="mt-1 text-sm text-muted">Всего клиентов</p>
-      </article>
-
-      {STATUS_ORDER.map((status) => (
-        <article
-          key={status}
-          className="rounded-xl border border-line bg-white p-4 shadow-panel"
-        >
-          <p className="text-3xl font-bold text-brand">{totals[status]}</p>
-          <p className="mt-1 text-sm text-muted">{STATUS_LABELS[status]}</p>
-        </article>
-      ))}
-
-      {overdueCount > 0 ? (
-        <article className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-panel sm:col-span-2 lg:col-span-1">
-          <p className="text-3xl font-bold text-red-700">{overdueCount}</p>
-          <p className="mt-1 text-sm font-medium text-red-700">Просрочен контакт</p>
-        </article>
-      ) : null}
+    <section className="panel overflow-hidden" aria-label="Счётчики по статусам">
+      <div className="flex overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {metrics.map((metric, index) => (
+          <article
+            key={metric.key}
+            className={`metric-cell shrink-0 sm:shrink sm:flex-1 ${
+              index > 0 ? 'border-l border-line' : ''
+            } ${metric.tone === 'danger' ? 'bg-danger/[0.03]' : ''}`}
+          >
+            <p
+              className={`metric-value ${metric.tone === 'danger' ? 'text-danger' : 'text-brand'}`}
+            >
+              {metric.value}
+            </p>
+            <p
+              className={`metric-label ${metric.tone === 'danger' ? 'text-danger/80' : ''}`}
+            >
+              {metric.label}
+            </p>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
